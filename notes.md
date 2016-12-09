@@ -217,6 +217,7 @@ sum(posteriors[1:5])
 #> 89.38
 
 You are testing dice for a casino to make sure that sixes do not come up more frequently than expected. Because you do not want to manually roll dice all day, you design a machine to roll a die repeatedly and record the number of sixes that come face up. In order to do a Bayesian analysis to test the hypothesis that p = 1/6 versus p = .175 , you set the machine to roll the die 6000 times. When you come back at the end of the day, you discover to your horror that the machine was unable to count higher than 999. The machine says that 999 sixes occurred. Given a prior probability of 0.8 placed on the hypothesis p = 1/6 , what is the posterior probability that the die is fair, given the censored data? Hint - to find the probability that at least x sixes occurred in N trials with proportion p (which is the likelihood in this problem), use the R command : 1-pbinom(x-1,N,p)
+rm
 
 models <- c(1/6, 0.175)
 priors <- c(0.8, 0.2)
@@ -231,7 +232,101 @@ numerators / denominator
 
 10 > TRUE
 
+## Week 2: Bayesian inference
+Continuous variables vs discrete values
+Binomial variable like number of heads is discrete because it can only take certain values, 1, 2, 3...
+    Probability mass function = histogram with probabilities for each possible value, AUC = 1
+Continuous variable can take any numerical value within an interval
+    0 probability of any given value
+    Can talk about the probability of lying in an interval
+    Probability density function instead of probability mass functions
+    Density curve instead of histogram
 
- 
+Distributions:
+    Continuous: normal, uniform, beta, gamma
+    Discrete: binomial, poisson
 
+### Lecture: Elicitation
+Expectations about where your data come from and personal beliefs about the mean or probability
+    Must obey all laws of probability and be consistent with everything you know
 
+Beta distributions are specified by two parameters, alpha and beta, passed into gamma functions
+    uniform distribution when alpha = beta = 1
+    alpha = beta center on 0.5 with increasing height as alpha and beta increase
+    alpha < beta give higher probabilities below 0.5
+    alpha > beta give higher probabilities above 0.5
+
+    mean of beta is alpha / (alpha + beta)
+
+If you observe enough data, different priors will converge to the same posterior data regardless of the prior.
+
+### Lecture: Conjugacy
+Conjugacy = posterior distribution is in the same familiy as your prior distribution, but with new parameter values
+
+Bayes rule for discrete variables can't be used for continuous variables because the denominator sums over all the possible values of the variable, which you can't do for continuous variables. 
+    Instead, you integrate over the interval in the denominator instea dof summing the possibilities
+    The numerator is the probability of your data given a particular probability multiplied by the density function for the probability
+    
+### Lecture: Inference on a binomial proportion
+RU-486 trial of 800 women who reported unprotected vaginal intercourse in previous 72 hours, 50% random allocation to standard therapy and 50% to RU-486. 4 pregnancies in standard, 0 pregnancies in RU-486. 
+
+Binomial distribution with known n and unknown p, but belief that the p is a beta function. If you observe x successes in n trials, your posterior for p will be another beta distribution with parameters alpha + x and beta + n - x. (Derives from bayes rule)
+
+Bayesian analysis: say have no prior knowledge of drug, so prior = uniform density = beta(1, 1)
+    posterior probability = beta(1+0, 1-0+4) = beta(1, 5)
+    p = mean = 1 / (1+5) = 1/6
+    posterior probability that p < 1/2 is 0.96875
+
+### Lecture: Gamma poisson 
+Data from a poisson distribution (any integer from 0 to infinity)
+    discrete
+    lambda = mean = variance for poisson distribution
+    probability mass function = (lambda^k / k!)exp(-lambda), summed for each k in the interval of interest
+Prior/posterior probabilities from gamma distribution
+    continuous    
+    Gamma distribution = continuous non-negative values
+    probability distribution function  
+        parameters: k, theta
+        mean = k*theta
+        sd   = theta*sqrt(k)
+    updates to parameters given new data
+        new data = x1, ..., xn
+            where each x is a number of counts
+        k     = k + sum(x, ..., xn) 
+        theta = theta / (n * theta + 1) 
+
+### Lecture: Normal
+Parameters = mean, standard deviation
+Assume prior for mean is mean v with standard deviation tao
+    data x1, ..., xn are independent
+    come from a normal distribution with known standard deviation sigma
+    given the new data, updated v is: 
+        v = (v * sigma^2 + n*mean(x1, ..., xn) * tao^2 ) 
+           --------------------------------------------
+                    (sigma^2 + n * tao^2) 
+    updated tao is
+        tao =             sigma^2 * tao^2   
+                sqrt( ------------------------- )
+                        sigma^2 + n * tao^2
+
+### Lecture: Non-conjugate priors
+Example: Prior for Ru-486 could be that probability that RU-486 is better than standard therapy is 1, but don't know how much better. This can be expressed as p (probability that a birth is from the RU-486 arm of the trial) having a uniform distribution between 0 and 0.5.
+
+The posterior from such a non-conjugate prior can't be calculated mathematically, must be computed. 
+    - JAGS (Just Another Gibbs Sampler) can be used to compute the posterior from the prior
+
+### Lecture: Credible intervals
+Point estimate plus or minus the standard error times a critical value
+Bayesian: The probability the true mean is contained within the given interval is 0.95
+    Any interval such that the posterior probability within the interval is 0.95
+    Desirable to find the shortest such interval, which can be done mathematically
+
+### Predictive inference
+Predictive inference = goal to find a posterior distribution about a variable that depends on a parameter, rather than about the parameter itself
+    You have a probability density function for the variable given the parameter and you have a probability for the parameter
+
+Example: two coins, probability of heads for them is 0.7 and 0.4, draw a coin randomly, get two heads, what is probability that you have the 0.7 coin?
+    -> 0.754
+    What is the probability that the next toss will come up heads? 
+    P(heads | 0.7) * 0.754 + P(heads | 0.4) * (1 - 0.754)
+    Don't need integration in this case because the possible values of the parameter are not infinite, just two possibilities
